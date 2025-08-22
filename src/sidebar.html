@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Context</title>
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            padding: 20px;
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--vscode-input-border);
+            background-color: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
+            border-radius: 2px;
+            box-sizing: border-box;
+            font-family: var(--vscode-font-family);
+        }
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        button {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+        .container {
+            max-width: 400px;
+        }
+        .success {
+            color: var(--vscode-testing-iconPassed);
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h3>File Context Information</h3>
+        
+        <div class="form-group">
+            <label for="filePath">File Path:</label>
+            <input type="text" id="filePath" value="{{filePath}}" readonly>
+        </div>
+
+        <div class="form-group">
+            <label for="gitlabProjectId">GitLab Project ID:</label>
+            <input type="text" id="gitlabProjectId" placeholder="Enter GitLab Project ID">
+        </div>
+
+        <div class="form-group">
+            <label for="allureId">Allure ID:</label>
+            <input type="text" id="allureId" placeholder="Enter Allure ID">
+        </div>
+
+        <div class="form-group">
+            <label for="testScenario">Test Scenario:</label>
+            <textarea id="testScenario" placeholder="Enter Test Scenario (multiple lines allowed)" rows="4"></textarea>
+        </div>
+
+        <button onclick="generate()">Generate</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+
+        function generate() {
+            const filePath = document.getElementById('filePath').value;
+            const gitlabProjectId = document.getElementById('gitlabProjectId').value;
+            const allureId = document.getElementById('allureId').value;
+            const testScenario = document.getElementById('testScenario').value;
+
+            const payload = {
+                filePath: filePath,
+                gitlabProjectId: gitlabProjectId,
+                allureId: allureId,
+                testScenario: testScenario
+            };
+
+            // Show loading state
+            document.getElementById('status').innerHTML = '<div class="success">Sending data...</div>';
+            
+            vscode.postMessage({
+                type: 'generate',
+                payload: payload
+            });
+        }
+
+        // Remove the Enter key event listener to prevent form submission on Enter
+        // The button now only works on click
+    </script>
+</body>
+</html>
