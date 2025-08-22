@@ -12,5 +12,10 @@
   "search.exclude": {
     "out": true,
     "node_modules": true
-  }
+  },
+  "fileContextSidebar.apiEndpoints": [
+        "https://httpbin.org/post",
+        "https://your-api.com/endpoint",
+        "http://localhost:3000/api"
+    ]
 }

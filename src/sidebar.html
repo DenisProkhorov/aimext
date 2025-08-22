@@ -19,7 +19,7 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
-        input[type="text"], textarea {
+        input[type="text"], textarea, select {
             width: 100%;
             padding: 8px;
             border: 1px solid var(--vscode-input-border);
@@ -42,16 +42,64 @@
             cursor: pointer;
             font-weight: bold;
             margin-top: 10px;
+            margin-right: 10px;
         }
         button:hover {
             background-color: var(--vscode-button-hoverBackground);
         }
+        button.secondary {
+            background-color: var(--vscode-button-secondaryBackground);
+        }
+        button.secondary:hover {
+            background-color: var(--vscode-button-secondaryHoverBackground);
+        }
         .container {
             max-width: 400px;
         }
-        .success {
-            color: var(--vscode-testing-iconPassed);
+        .status {
             margin-top: 10px;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .success {
+            background-color: var(--vscode-inputValidation-infoBackground);
+            border: 1px solid var(--vscode-inputValidation-infoBorder);
+        }
+        .error {
+            background-color: var(--vscode-inputValidation-errorBackground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+        }
+        .tab {
+            padding: 8px 15px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            border-bottom-color: var(--vscode-button-background);
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .response-area {
+            margin-top: 15px;
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 3px;
+            padding: 10px;
+            background-color: var(--vscode-textCodeBlock-background);
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
         }
     </style>
 </head>
@@ -59,48 +107,96 @@
     <div class="container">
         <h3>File Context Information</h3>
         
-        <div class="form-group">
-            <label for="filePath">File Path:</label>
-            <input type="text" id="filePath" value="{{filePath}}" readonly>
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('request')">Request</div>
+            <div class="tab" onclick="switchTab('response')">Response</div>
         </div>
 
-        <div class="form-group">
-            <label for="gitlabProjectId">GitLab Project ID:</label>
-            <input type="text" id="gitlabProjectId" placeholder="Enter GitLab Project ID">
+        <div id="requestTab" class="tab-content active">
+            <div class="form-group">
+                <label for="filePath">File Path:</label>
+                <input type="text" id="filePath" value="{{filePath}}" readonly>
+            </div>
+
+            <div class="form-group">
+                <label for="endpoint">API Endpoint:</label>
+                <select id="endpoint">
+                    {{endpointOptions}}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="gitlabProjectId">GitLab Project ID:</label>
+                <input type="text" id="gitlabProjectId" placeholder="Enter GitLab Project ID">
+            </div>
+
+            <div class="form-group">
+                <label for="allureId">Allure ID:</label>
+                <input type="text" id="allureId" placeholder="Enter Allure ID">
+            </div>
+
+            <div class="form-group">
+                <label for="testScenario">Test Scenario:</label>
+                <textarea id="testScenario" placeholder="Enter Test Scenario (multiple lines allowed)" rows="4"></textarea>
+            </div>
+
+            <button onclick="generate()">Send Request</button>
+            <div id="requestStatus" class="status"></div>
         </div>
 
-        <div class="form-group">
-            <label for="allureId">Allure ID:</label>
-            <input type="text" id="allureId" placeholder="Enter Allure ID">
-        </div>
+        <div id="responseTab" class="tab-content">
+            <div class="form-group">
+                <label>Response Status:</label>
+                <input type="text" id="responseStatus" readonly>
+            </div>
 
-        <div class="form-group">
-            <label for="testScenario">Test Scenario:</label>
-            <textarea id="testScenario" placeholder="Enter Test Scenario (multiple lines allowed)" rows="4"></textarea>
-        </div>
+            <div class="form-group">
+                <label>Response Data:</label>
+                <div id="responseData" class="response-area"></div>
+            </div>
 
-        <button onclick="generate()">Generate</button>
-        <div id="status"></div>
+            <button onclick="createEditor()" class="secondary">Open in Editor</button>
+            <div id="responseStatus" class="status"></div>
+        </div>
     </div>
 
     <script>
         const vscode = acquireVsCodeApi();
+        let currentResponse = null;
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+        }
 
         function generate() {
             const filePath = document.getElementById('filePath').value;
+            const endpoint = document.getElementById('endpoint').value;
             const gitlabProjectId = document.getElementById('gitlabProjectId').value;
             const allureId = document.getElementById('allureId').value;
             const testScenario = document.getElementById('testScenario').value;
 
             const payload = {
-                filePath: filePath,
-                gitlabProjectId: gitlabProjectId,
-                allureId: allureId,
-                testScenario: testScenario
+                endpoint: endpoint,
+                data: {
+                    filePath: filePath,
+                    gitlabProjectId: gitlabProjectId,
+                    allureId: allureId,
+                    testScenario: testScenario
+                }
             };
 
-            // Show loading state
-            document.getElementById('status').innerHTML = '<div class="success">Sending data...</div>';
+            document.getElementById('requestStatus').innerHTML = 
+                '<div class="success">Sending request...</div>';
             
             vscode.postMessage({
                 type: 'generate',
@@ -108,8 +204,55 @@
             });
         }
 
-        // Remove the Enter key event listener to prevent form submission on Enter
-        // The button now only works on click
+        function createEditor() {
+            if (currentResponse) {
+                vscode.postMessage({
+                    type: 'createEditor'
+                });
+            } else {
+                document.getElementById('responseStatus').innerHTML = 
+                    '<div class="error">No response data available</div>';
+            }
+        }
+
+        // Handle messages from extension
+        window.addEventListener('message', event => {
+            const message = event.data;
+            
+            switch (message.type) {
+                case 'response':
+                    currentResponse = message.payload;
+                    
+                    // Update response tab
+                    document.getElementById('responseStatus').value = 
+                        message.payload.status + (message.payload.error ? ' (Error)' : ' (Success)');
+                    
+                    let responseText;
+                    if (message.payload.error) {
+                        responseText = `Error: ${message.payload.error}\n\n`;
+                        if (message.payload.data) {
+                            responseText += JSON.stringify(message.payload.data, null, 2);
+                        }
+                    } else {
+                        responseText = JSON.stringify(message.payload.data, null, 2);
+                    }
+                    
+                    document.getElementById('responseData').textContent = responseText;
+                    
+                    // Update request status
+                    if (message.payload.error) {
+                        document.getElementById('requestStatus').innerHTML = 
+                            `<div class="error">Error: ${message.payload.error}</div>`;
+                    } else {
+                        document.getElementById('requestStatus').innerHTML = 
+                            `<div class="success">Request successful! Status: ${message.payload.status}</div>`;
+                    }
+                    
+                    // Switch to response tab
+                    switchTab('response');
+                    break;
+            }
+        });
     </script>
 </body>
 </html>

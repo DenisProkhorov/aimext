@@ -10,25 +10,42 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:fileContextSidebar.openSidebar",
-    "onCommand:fileContextSidebar.test"
+    "onCommand:myExtension.openSidebar"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
-                {
-                    "command": "myExtension.doSomethingWithFile",
-                    "title": "Do Something with this File"
-                }
-            ],
-            "menus": {
-            "explorer/context": [
-                {
-                    "command": "myExtension.doSomethingWithFile",
-                    "group": "navigation@1"
-                }
-            ]
+      {
+        "command": "myExtension.doSomethingWithFile",
+        "title": "Do Something with this File"
+      },
+      {
+        "command": "myExtension.openSidebar",
+        "title": "Open File Context Sidebar"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "myExtension.doSomethingWithFile",
+          "group": "navigation@1"
         }
+      ]
+    },
+    "configuration": {
+      "title": "File Context Sidebar",
+      "properties": {
+        "fileContextSidebar.apiEndpoints": {
+          "type": "array",
+          "default": [
+            "https://httpbin.org/post",
+            "https://jsonplaceholder.typicode.com/posts",
+            "http://localhost:3000/api"
+          ],
+          "description": "List of API endpoints for the dropdown"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -41,6 +58,6 @@
     "typescript": "^4.3.5"
   },
   "dependencies": {
-    "axios": "^0.21.4"
+    "axios": "^1.6.0"
   }
 }

@@ -5,24 +5,30 @@ import * as vscode from 'vscode';
 
 let extensionContext: vscode.ExtensionContext;
 
-    export function activate(context: vscode.ExtensionContext) {
-        extensionContext = context;
-        let disposable = vscode.commands.registerCommand('myExtension.doSomethingWithFile', (resource: vscode.Uri) => {
-            vscode.window.showInformationMessage(`You right-clicked on: ${resource.fsPath}`);
-            openSidebar(resource, context);
-        });
+interface ApiResponse {
+    status: number;
+    data: any;
+    error?: string;
+}
 
-        const openSidebarCommand = vscode.commands.registerCommand('myExtension.openSidebar', (uri: vscode.Uri) => {
+export function activate(context: vscode.ExtensionContext) {
+    extensionContext = context;
+    
+    let disposable = vscode.commands.registerCommand('myExtension.doSomethingWithFile', (resource: vscode.Uri) => {
+        vscode.window.showInformationMessage(`You right-clicked on: ${resource.fsPath}`);
+        openSidebar(resource, context);
+    });
+
+    const openSidebarCommand = vscode.commands.registerCommand('myExtension.openSidebar', (uri: vscode.Uri) => {
         console.log('Context menu clicked on file:', uri.fsPath);
         openSidebar(uri, context);
     });
 
-        context.subscriptions.push(disposable);
-        context.subscriptions.push(openSidebarCommand);
-    }
+    context.subscriptions.push(disposable);
+    context.subscriptions.push(openSidebarCommand);
+}
 
 function openSidebar(uri: vscode.Uri, context: vscode.ExtensionContext) {
-    // Get workspace root path
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     let relativePath = '';
 
@@ -31,45 +37,61 @@ function openSidebar(uri: vscode.Uri, context: vscode.ExtensionContext) {
         console.log('Relative path calculated:', relativePath);
     }
 
-    // Create and show webview panel
+    // Get configured endpoints
+    const config = vscode.workspace.getConfiguration('fileContextSidebar');
+    const endpoints = config.get<string[]>('apiEndpoints') || ['https://httpbin.org/post'];
+
     const panel = vscode.window.createWebviewPanel(
         'fileContextSidebar',
         'File Context - ' + path.basename(uri.fsPath),
         vscode.ViewColumn.Beside,
         {
             enableScripts: true,
-            retainContextWhenHidden: true
+            retainContextWhenHidden: true,
+            localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'src'))]
         }
     );
 
-    // Set the HTML content from file
-    panel.webview.html = getWebviewContent(relativePath, context);
+    panel.webview.html = getWebviewContent(relativePath, endpoints, context);
 
-    // Handle messages from the webview
+    let lastResponse: ApiResponse | null = null;
+
     panel.webview.onDidReceiveMessage(
         async (data) => {
             switch (data.type) {
                 case 'generate':
-                    handleGenerate(data.payload);
+                    lastResponse = await handleGenerate(data.payload, panel);
+                    break;
+                case 'createEditor':
+                    if (lastResponse) {
+                        createEditorWithResponse(lastResponse);
+                    } else {
+                        vscode.window.showWarningMessage('No response data available to create editor');
+                    }
                     break;
             }
         },
         undefined,
-        []
+        context.subscriptions
     );
 }
 
-function getWebviewContent(relativePath: string, context: vscode.ExtensionContext): string {
+function getWebviewContent(relativePath: string, endpoints: string[], context: vscode.ExtensionContext): string {
     try {
-        // Read HTML template file
         const htmlPath = path.join(context.extensionPath, 'src', 'sidebar.html');
         let htmlContent = fs.readFileSync(htmlPath, 'utf8');
         
-        // Escape the relative path
         const escapedPath = relativePath.replace(/\\/g, '/').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         
-        // Replace placeholder with actual file path
-        htmlContent = htmlContent.replace('{{filePath}}', escapedPath);
+        // Create endpoint options HTML
+        const endpointOptions = endpoints.map(endpoint => 
+            `<option value="${endpoint}">${endpoint}</option>`
+        ).join('');
+
+        // Replace placeholders
+        htmlContent = htmlContent
+            .replace('{{filePath}}', escapedPath)
+            .replace('{{endpointOptions}}', endpointOptions);
         
         return htmlContent;
     } catch (error) {
@@ -78,28 +100,61 @@ function getWebviewContent(relativePath: string, context: vscode.ExtensionContex
     }
 }
 
-async function handleGenerate(payload: any) {
+async function handleGenerate(payload: any, panel: vscode.WebviewPanel): Promise<ApiResponse> {
     console.log('Generate button clicked with data:', payload);
     
     try {
-        // Using httpbin for testing - replace with your actual API
-        const apiUrl = 'https://httpbin.org/post';
-        
-        console.log('Sending POST request to:', apiUrl);
-        const response = await axios.post(apiUrl, payload, {
+        const response = await axios.post(payload.endpoint, payload.data, {
             headers: {
                 'Content-Type': 'application/json'
             },
-            timeout: 5000
+            timeout: 10000
         });
 
-        console.log('POST request successful:', response.status);
-        vscode.window.showInformationMessage('Data sent successfully!');
+        const apiResponse: ApiResponse = {
+            status: response.status,
+            data: response.data
+        };
+
+        // Send response back to webview
+        panel.webview.postMessage({
+            type: 'response',
+            payload: apiResponse
+        });
+
+        vscode.window.showInformationMessage(`Request successful! Status: ${response.status}`);
+        return apiResponse;
         
     } catch (error: any) {
         console.error('POST request failed:', error.message);
-        vscode.window.showErrorMessage(`Failed to send data: ${error.message}`);
+        
+        const errorResponse: ApiResponse = {
+            status: error.response?.status || 0,
+            data: error.response?.data || null,
+            error: error.message
+        };
+
+        panel.webview.postMessage({
+            type: 'response',
+            payload: errorResponse
+        });
+
+        vscode.window.showErrorMessage(`Request failed: ${error.message}`);
+        return errorResponse;
     }
+}
+
+function createEditorWithResponse(response: ApiResponse) {
+    // Create formatted response content
+    const content = JSON.stringify(response.data, null, 2);
+    
+    // Create new text document
+    vscode.workspace.openTextDocument({
+        content: content,
+        language: 'json'
+    }).then(document => {
+        vscode.window.showTextDocument(document, vscode.ViewColumn.One);
+    });
 }
 
 export function deactivate() {
