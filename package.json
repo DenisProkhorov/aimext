@@ -22,6 +22,10 @@
       {
         "command": "myExtension.openSidebar",
         "title": "Open File Context Sidebar"
+      },
+      {
+        "command": "myExtension.resetEndpoints",
+        "title": "Reset API Endpoints to Default"
       }
     ],
     "menus": {
