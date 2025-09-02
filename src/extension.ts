@@ -22,17 +22,17 @@ export function activate(context: vscode.ExtensionContext) {
     
     initializeSettings();
     
-    let disposable = vscode.commands.registerCommand('myExtension.doSomethingWithFile', (resource: vscode.Uri) => {
+    let disposable = vscode.commands.registerCommand('aimPanel.openAIM', (resource: vscode.Uri) => {
         vscode.window.showInformationMessage(`You right-clicked on: ${resource.fsPath}`);
         openSidebar(resource, context);
     });
 
-    const openSidebarCommand = vscode.commands.registerCommand('myExtension.openSidebar', (uri: vscode.Uri) => {
+    const openSidebarCommand = vscode.commands.registerCommand('aimPanel.openSidebar', (uri: vscode.Uri) => {
         console.log('Context menu clicked on file:', uri.fsPath);
         openSidebar(uri, context);
     });
 
-    const resetEndpointsCommand = vscode.commands.registerCommand('myExtension.resetEndpoints', () => {
+    const resetEndpointsCommand = vscode.commands.registerCommand('aimPanel.resetEndpoints', () => {
         resetEndpointsToDefault();
     });
 

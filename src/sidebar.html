@@ -142,7 +142,6 @@
         <div class="tabs">
             <div class="tab active" onclick="switchTab('request')">Request</div>
             <div class="tab" onclick="switchTab('response')">Response</div>
-            <div class="tab" onclick="switchTab('config')">Configuration</div>
         </div>
 
         <div id="requestTab" class="tab-content active">
@@ -190,23 +189,6 @@
 
             <button onclick="createEditor()" class="secondary">Open in Editor</button>
             <div id="responseStatus" class="status"></div>
-        </div>
-
-        <div id="configTab" class="tab-content config-tab">
-            <div class="form-group">
-                <label for="newEndpoint">Add New Endpoint:</label>
-                <input type="text" id="newEndpoint" placeholder="https://api.example.com/endpoint">
-                <button onclick="addNewEndpoint()" style="margin-top: 5px;">Add Endpoint</button>
-            </div>
-
-            <div class="form-group">
-                <label>Current Endpoints:</label>
-                <div id="endpointsList" class="endpoint-list">
-                    <!-- Endpoints will be populated by JavaScript -->
-                </div>
-            </div>
-
-            <button onclick="resetToDefaults()" class="secondary">Reset to Default Endpoints</button>
         </div>
     </div>
 

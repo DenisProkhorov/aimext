@@ -1,7 +1,7 @@
 {
   "name": "file-context-sidebar",
-  "displayName": "File Context Sidebar",
-  "description": "Sidebar that appears on right-click with file information",
+  "displayName": "AIM File Context Sidebar",
+  "description": "AIM Sidebar that appears on right-click with file path to ease generation of tests with AIM",
   "version": "1.0.0",
   "engines": {
     "vscode": "^1.60.0"
@@ -9,44 +9,36 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onCommand:myExtension.openSidebar"
-  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "myExtension.doSomethingWithFile",
-        "title": "Do Something with this File"
+        "command": "aimPanel.openAIM",
+        "title": "Открыть меню AIM"
       },
       {
-        "command": "myExtension.openSidebar",
-        "title": "Open File Context Sidebar"
-      },
-      {
-        "command": "myExtension.resetEndpoints",
-        "title": "Reset API Endpoints to Default"
+        "command": "aimPanel.openSidebar",
+        "title": "Открыть Sidebar AIM"
       }
     ],
     "menus": {
       "explorer/context": [
         {
-          "command": "myExtension.doSomethingWithFile",
+          "command": "aimPanel.openAIM",
           "group": "navigation@1"
         }
       ]
     },
     "configuration": {
-      "title": "File Context Sidebar",
+      "title": "AIM - генерация автотеста по примеру",
       "properties": {
         "fileContextSidebar.apiEndpoints": {
           "type": "array",
           "default": [
-            "https://httpbin.org/post",
-            "https://jsonplaceholder.typicode.com/posts",
-            "http://localhost:3000/api"
+            "https://jsonplaceholder.typicode.com/docs",
+            "http://localhost:3000/docs"
           ],
-          "description": "List of API endpoints for the dropdown"
+          "description": "Список эндпоинтов API "
         }
       }
     }
